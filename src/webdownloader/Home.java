@@ -4,7 +4,6 @@
  */
 package webdownloader;
 
-import java.util.Timer;
 import javax.microedition.lcdui.*;
 import javax.microedition.midlet.*;
 
@@ -12,8 +11,7 @@ import javax.microedition.midlet.*;
  * @author n0305434
  */
 public class Home extends MIDlet implements CommandListener {
-    
-    private Timer timer;
+
     private boolean midletPaused = false;
 //<editor-fold defaultstate="collapsed" desc=" Generated Fields ">//GEN-BEGIN:|fields|0|
     private Form Home;
@@ -21,22 +19,18 @@ public class Home extends MIDlet implements CommandListener {
     private TextField charTextField;
     private Form Results;
     private StringItem totalCountedString;
-    private StringItem delimeterCountedString;
     private StringItem percentageString;
+    private StringItem delimeterCountedString;
+    private ImageItem imageItem;
     private Form Loading;
     private Gauge completeGuage;
-    private Command okCommand;
+    private Command startCountingCommand;
+    private Command backToStartCommand;
     private Command exitCommand;
-    private Command exitCommand1;
-    private Command cancelCommand;
-    private Command okCommand1;
-    private Command backCommand;
-    private Command exitCommand2;
-    private Command exitCommand3;
-    private Command okCommand2;
-    private Command cancelCommand1;
+    private Command cancelCountingCommand;
     private Ticker ticker;
 //</editor-fold>//GEN-END:|fields|0|
+    private CounterThread countingThread;
 
     /**
      * The Home constructor.
@@ -115,7 +109,7 @@ public class Home extends MIDlet implements CommandListener {
         if (Home == null) {//GEN-END:|14-getter|0|14-preInit
             // write pre-init user code here
             Home = new Form("Welcome", new Item[]{getUrlTextField(), getCharTextField()});//GEN-BEGIN:|14-getter|1|14-postInit
-            Home.addCommand(getOkCommand1());
+            Home.addCommand(getStartCountingCommand());
             Home.setCommandListener(this);//GEN-END:|14-getter|1|14-postInit
             // write post-init user code here
         }//GEN-BEGIN:|14-getter|2|
@@ -150,76 +144,12 @@ public class Home extends MIDlet implements CommandListener {
     public TextField getCharTextField() {
         if (charTextField == null) {//GEN-END:|19-getter|0|19-preInit
             // write pre-init user code here
-            charTextField = new TextField("Enter two chatacters to test for:", "a", 32, TextField.ANY);//GEN-LINE:|19-getter|1|19-postInit
+            charTextField = new TextField("Enter a chatacter to test for:", "a", 1, TextField.ANY);//GEN-LINE:|19-getter|1|19-postInit
             // write post-init user code here
         }//GEN-BEGIN:|19-getter|2|
         return charTextField;
     }
 //</editor-fold>//GEN-END:|19-getter|2|
-
-//<editor-fold defaultstate="collapsed" desc=" Generated Getter: okCommand ">//GEN-BEGIN:|21-getter|0|21-preInit
-    /**
-     * Returns an initialized instance of okCommand component.
-     *
-     * @return the initialized component instance
-     */
-    public Command getOkCommand() {
-        if (okCommand == null) {//GEN-END:|21-getter|0|21-preInit
-            // write pre-init user code here
-            okCommand = new Command("Ok", Command.OK, 0);//GEN-LINE:|21-getter|1|21-postInit
-            // write post-init user code here
-        }//GEN-BEGIN:|21-getter|2|
-        return okCommand;
-    }
-//</editor-fold>//GEN-END:|21-getter|2|
-
-//<editor-fold defaultstate="collapsed" desc=" Generated Getter: exitCommand ">//GEN-BEGIN:|24-getter|0|24-preInit
-    /**
-     * Returns an initialized instance of exitCommand component.
-     *
-     * @return the initialized component instance
-     */
-    public Command getExitCommand() {
-        if (exitCommand == null) {//GEN-END:|24-getter|0|24-preInit
-            // write pre-init user code here
-            exitCommand = new Command("Exit", Command.EXIT, 0);//GEN-LINE:|24-getter|1|24-postInit
-            // write post-init user code here
-        }//GEN-BEGIN:|24-getter|2|
-        return exitCommand;
-    }
-//</editor-fold>//GEN-END:|24-getter|2|
-
-//<editor-fold defaultstate="collapsed" desc=" Generated Getter: exitCommand1 ">//GEN-BEGIN:|27-getter|0|27-preInit
-    /**
-     * Returns an initialized instance of exitCommand1 component.
-     *
-     * @return the initialized component instance
-     */
-    public Command getExitCommand1() {
-        if (exitCommand1 == null) {//GEN-END:|27-getter|0|27-preInit
-            // write pre-init user code here
-            exitCommand1 = new Command("Exit", Command.EXIT, 0);//GEN-LINE:|27-getter|1|27-postInit
-            // write post-init user code here
-        }//GEN-BEGIN:|27-getter|2|
-        return exitCommand1;
-    }
-//</editor-fold>//GEN-END:|27-getter|2|
-
-//<editor-fold defaultstate="collapsed" desc=" Generated Getter: cancelCommand ">//GEN-BEGIN:|30-getter|0|30-preInit
-    /**
-     * Returns an initialized instance of cancelCommand component.
-     *
-     * @return the initialized component instance
-     */
-    public Command getCancelCommand() {
-        if (cancelCommand == null) {//GEN-END:|30-getter|0|30-preInit
-            // write pre-init user code here
-            cancelCommand = new Command("Cancel", Command.CANCEL, 0);//GEN-LINE:|30-getter|1|30-postInit
-            // write post-init user code here
-        }//GEN-BEGIN:|30-getter|2|
-        return cancelCommand;
-    }
-//</editor-fold>//GEN-END:|30-getter|2|
 
 //<editor-fold defaultstate="collapsed" desc=" Generated Method: commandAction for Displayables ">//GEN-BEGIN:|7-commandAction|0|7-preCommandAction
     /**
@@ -232,38 +162,40 @@ public class Home extends MIDlet implements CommandListener {
     public void commandAction(Command command, Displayable displayable) {//GEN-END:|7-commandAction|0|7-preCommandAction
         // write pre-action user code here
         if (displayable == Home) {//GEN-BEGIN:|7-commandAction|1|33-preAction
-            if (command == okCommand1) {//GEN-END:|7-commandAction|1|33-preAction
+            if (command == startCountingCommand) {//GEN-END:|7-commandAction|1|33-preAction
                 // write pre-action user code here
                 switchDisplayable(null, getLoading());//GEN-LINE:|7-commandAction|2|33-postAction
                 // write post-action user code here
-                timer = new Timer();
-            
-            String url = this.getUrlTextField().getString();
-            String chars = this.getCharTextField().getString();
-            CounterTimer task = new CounterTimer(this, url, chars);
-            
-            timer.schedule(task, 0, 1);
+
+                String url = urlTextField.getString();
+                String chars = charTextField.getString();  
+                countingThread = new CounterThread(this, url, chars);
+                countingThread.start();
+                
+                charTextField = null;
+                urlTextField = null;
             }//GEN-BEGIN:|7-commandAction|3|57-preAction
         } else if (displayable == Loading) {
-            if (command == cancelCommand1) {//GEN-END:|7-commandAction|3|57-preAction
+            if (command == cancelCountingCommand) {//GEN-END:|7-commandAction|3|57-preAction
                 // write pre-action user code here
                 switchDisplayable(null, getHome());//GEN-LINE:|7-commandAction|4|57-postAction
                 // write post-action user code here
-                timer.cancel();
-                this.getCompleteGuage().setValue(0);
+                countingThread.stopCounting();
+                countingThread = null;
+                completeGuage = null;
             }//GEN-BEGIN:|7-commandAction|5|40-preAction
         } else if (displayable == Results) {
-            if (command == backCommand) {//GEN-END:|7-commandAction|5|40-preAction
+            if (command == backToStartCommand) {//GEN-END:|7-commandAction|5|40-preAction
                 // write pre-action user code here
-                this.getCompleteGuage().setValue(0);
-                timer.cancel();
+                countingThread.stopCounting();
                 switchDisplayable(null, getHome());//GEN-LINE:|7-commandAction|6|40-postAction
-                // write post-action user code here
-            } else if (command == exitCommand2) {//GEN-LINE:|7-commandAction|7|43-preAction
+                imageItem.setImage(null);
+                imageItem = null;
+                countingThread = null;
+            } else if (command == exitCommand) {//GEN-LINE:|7-commandAction|7|43-preAction
                 // write pre-action user code here
-                this.getCompleteGuage().setValue(0);
-                this.getTotalCountedString().setText("0");
-                timer.cancel();
+                countingThread.stopCounting();
+                countingThread = null;
                 exitMIDlet();//GEN-LINE:|7-commandAction|8|43-postAction
                 // write post-action user code here
             }//GEN-BEGIN:|7-commandAction|9|7-postCommandAction
@@ -271,7 +203,6 @@ public class Home extends MIDlet implements CommandListener {
         // write post-action user code here
     }//GEN-BEGIN:|7-commandAction|10|
 //</editor-fold>//GEN-END:|7-commandAction|10|
-
 
 
 //<editor-fold defaultstate="collapsed" desc=" Generated Getter: Results ">//GEN-BEGIN:|31-getter|0|31-preInit
@@ -283,9 +214,9 @@ public class Home extends MIDlet implements CommandListener {
     public Form getResults() {
         if (Results == null) {//GEN-END:|31-getter|0|31-preInit
             // write pre-init user code here
-            Results = new Form("Results", new Item[]{getTotalCountedString(), getDelimeterCountedString(), getPercentageString()});//GEN-BEGIN:|31-getter|1|31-postInit
-            Results.addCommand(getBackCommand());
-            Results.addCommand(getExitCommand2());
+            Results = new Form("Results", new Item[]{getTotalCountedString(), getDelimeterCountedString(), getPercentageString(), getImageItem()});//GEN-BEGIN:|31-getter|1|31-postInit
+            Results.addCommand(getBackToStartCommand());
+            Results.addCommand(getExitCommand());
             Results.setCommandListener(this);//GEN-END:|31-getter|1|31-postInit
             // write post-init user code here
         }//GEN-BEGIN:|31-getter|2|
@@ -309,73 +240,53 @@ public class Home extends MIDlet implements CommandListener {
     }
 //</editor-fold>//GEN-END:|35-getter|2|
 
-
-
-
-
-//<editor-fold defaultstate="collapsed" desc=" Generated Getter: okCommand1 ">//GEN-BEGIN:|32-getter|0|32-preInit
+//<editor-fold defaultstate="collapsed" desc=" Generated Getter: startCountingCommand ">//GEN-BEGIN:|32-getter|0|32-preInit
     /**
-     * Returns an initialized instance of okCommand1 component.
+     * Returns an initialized instance of startCountingCommand component.
      *
      * @return the initialized component instance
      */
-    public Command getOkCommand1() {
-        if (okCommand1 == null) {//GEN-END:|32-getter|0|32-preInit
+    public Command getStartCountingCommand() {
+        if (startCountingCommand == null) {//GEN-END:|32-getter|0|32-preInit
             // write pre-init user code here
-            okCommand1 = new Command("Ok", Command.OK, 0);//GEN-LINE:|32-getter|1|32-postInit
+            startCountingCommand = new Command("Ok", Command.OK, 0);//GEN-LINE:|32-getter|1|32-postInit
             // write post-init user code here
         }//GEN-BEGIN:|32-getter|2|
-        return okCommand1;
+        return startCountingCommand;
     }
 //</editor-fold>//GEN-END:|32-getter|2|
 
-//<editor-fold defaultstate="collapsed" desc=" Generated Getter: backCommand ">//GEN-BEGIN:|39-getter|0|39-preInit
+//<editor-fold defaultstate="collapsed" desc=" Generated Getter: backToStartCommand ">//GEN-BEGIN:|39-getter|0|39-preInit
     /**
-     * Returns an initialized instance of backCommand component.
+     * Returns an initialized instance of backToStartCommand component.
      *
      * @return the initialized component instance
      */
-    public Command getBackCommand() {
-        if (backCommand == null) {//GEN-END:|39-getter|0|39-preInit
+    public Command getBackToStartCommand() {
+        if (backToStartCommand == null) {//GEN-END:|39-getter|0|39-preInit
             // write pre-init user code here
-            backCommand = new Command("Back", Command.BACK, 0);//GEN-LINE:|39-getter|1|39-postInit
+            backToStartCommand = new Command("Back", Command.BACK, 0);//GEN-LINE:|39-getter|1|39-postInit
             // write post-init user code here
         }//GEN-BEGIN:|39-getter|2|
-        return backCommand;
+        return backToStartCommand;
     }
 //</editor-fold>//GEN-END:|39-getter|2|
 
-//<editor-fold defaultstate="collapsed" desc=" Generated Getter: exitCommand2 ">//GEN-BEGIN:|42-getter|0|42-preInit
+//<editor-fold defaultstate="collapsed" desc=" Generated Getter: exitCommand ">//GEN-BEGIN:|42-getter|0|42-preInit
     /**
-     * Returns an initialized instance of exitCommand2 component.
+     * Returns an initialized instance of exitCommand component.
      *
      * @return the initialized component instance
      */
-    public Command getExitCommand2() {
-        if (exitCommand2 == null) {//GEN-END:|42-getter|0|42-preInit
+    public Command getExitCommand() {
+        if (exitCommand == null) {//GEN-END:|42-getter|0|42-preInit
             // write pre-init user code here
-            exitCommand2 = new Command("Exit", Command.EXIT, 0);//GEN-LINE:|42-getter|1|42-postInit
+            exitCommand = new Command("Exit", Command.EXIT, 0);//GEN-LINE:|42-getter|1|42-postInit
             // write post-init user code here
         }//GEN-BEGIN:|42-getter|2|
-        return exitCommand2;
+        return exitCommand;
     }
 //</editor-fold>//GEN-END:|42-getter|2|
-
-//<editor-fold defaultstate="collapsed" desc=" Generated Getter: exitCommand3 ">//GEN-BEGIN:|45-getter|0|45-preInit
-    /**
-     * Returns an initialized instance of exitCommand3 component.
-     *
-     * @return the initialized component instance
-     */
-    public Command getExitCommand3() {
-        if (exitCommand3 == null) {//GEN-END:|45-getter|0|45-preInit
-            // write pre-init user code here
-            exitCommand3 = new Command("Exit", Command.EXIT, 0);//GEN-LINE:|45-getter|1|45-postInit
-            // write post-init user code here
-        }//GEN-BEGIN:|45-getter|2|
-        return exitCommand3;
-    }
-//</editor-fold>//GEN-END:|45-getter|2|
 
 //<editor-fold defaultstate="collapsed" desc=" Generated Getter: ticker ">//GEN-BEGIN:|38-getter|0|38-preInit
     /**
@@ -436,7 +347,7 @@ public class Home extends MIDlet implements CommandListener {
             // write pre-init user code here
             Loading = new Form("Loading", new Item[]{getCompleteGuage()});//GEN-BEGIN:|50-getter|1|50-postInit
             Loading.setTicker(getTicker());
-            Loading.addCommand(getCancelCommand1());
+            Loading.addCommand(getCancelCountingCommand());
             Loading.setCommandListener(this);//GEN-END:|50-getter|1|50-postInit
             // write post-init user code here
         }//GEN-BEGIN:|50-getter|2|
@@ -460,37 +371,37 @@ public class Home extends MIDlet implements CommandListener {
     }
 //</editor-fold>//GEN-END:|51-getter|2|
 
-//<editor-fold defaultstate="collapsed" desc=" Generated Getter: okCommand2 ">//GEN-BEGIN:|53-getter|0|53-preInit
+//<editor-fold defaultstate="collapsed" desc=" Generated Getter: cancelCountingCommand ">//GEN-BEGIN:|56-getter|0|56-preInit
     /**
-     * Returns an initialized instance of okCommand2 component.
+     * Returns an initialized instance of cancelCountingCommand component.
      *
      * @return the initialized component instance
      */
-    public Command getOkCommand2() {
-        if (okCommand2 == null) {//GEN-END:|53-getter|0|53-preInit
+    public Command getCancelCountingCommand() {
+        if (cancelCountingCommand == null) {//GEN-END:|56-getter|0|56-preInit
             // write pre-init user code here
-            okCommand2 = new Command("Ok", Command.OK, 0);//GEN-LINE:|53-getter|1|53-postInit
-            // write post-init user code here
-        }//GEN-BEGIN:|53-getter|2|
-        return okCommand2;
-    }
-//</editor-fold>//GEN-END:|53-getter|2|
-
-//<editor-fold defaultstate="collapsed" desc=" Generated Getter: cancelCommand1 ">//GEN-BEGIN:|56-getter|0|56-preInit
-    /**
-     * Returns an initialized instance of cancelCommand1 component.
-     *
-     * @return the initialized component instance
-     */
-    public Command getCancelCommand1() {
-        if (cancelCommand1 == null) {//GEN-END:|56-getter|0|56-preInit
-            // write pre-init user code here
-            cancelCommand1 = new Command("Cancel", Command.CANCEL, 0);//GEN-LINE:|56-getter|1|56-postInit
+            cancelCountingCommand = new Command("Cancel", Command.CANCEL, 0);//GEN-LINE:|56-getter|1|56-postInit
             // write post-init user code here
         }//GEN-BEGIN:|56-getter|2|
-        return cancelCommand1;
+        return cancelCountingCommand;
     }
 //</editor-fold>//GEN-END:|56-getter|2|
+
+//<editor-fold defaultstate="collapsed" desc=" Generated Getter: imageItem ">//GEN-BEGIN:|61-getter|0|61-preInit
+    /**
+     * Returns an initialized instance of imageItem component.
+     *
+     * @return the initialized component instance
+     */
+    public ImageItem getImageItem() {
+        if (imageItem == null) {//GEN-END:|61-getter|0|61-preInit
+            // write pre-init user code here
+            imageItem = new ImageItem("Pie chart:", null, ImageItem.LAYOUT_DEFAULT | Item.LAYOUT_SHRINK | Item.LAYOUT_VSHRINK, "Trying to load pie chart...");//GEN-LINE:|61-getter|1|61-postInit
+            // write post-init user code here
+        }//GEN-BEGIN:|61-getter|2|
+        return imageItem;
+    }
+//</editor-fold>//GEN-END:|61-getter|2|
 
     /**
      * Returns a display instance.
@@ -539,5 +450,4 @@ public class Home extends MIDlet implements CommandListener {
      */
     public void destroyApp(boolean unconditional) {
     }
-    
 }
