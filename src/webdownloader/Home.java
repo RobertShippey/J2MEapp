@@ -167,13 +167,11 @@ public class Home extends MIDlet implements CommandListener {
                 switchDisplayable(null, getLoading());//GEN-LINE:|7-commandAction|2|33-postAction
                 // write post-action user code here
 
-                String url = urlTextField.getString();
-                String chars = charTextField.getString();  
+                String url = getUrlTextField().getString();
+                String chars = getCharTextField().getString();  
                 countingThread = new CounterThread(this, url, chars);
                 countingThread.start();
                 
-                charTextField = null;
-                urlTextField = null;
             }//GEN-BEGIN:|7-commandAction|3|57-preAction
         } else if (displayable == Loading) {
             if (command == cancelCountingCommand) {//GEN-END:|7-commandAction|3|57-preAction
@@ -182,15 +180,13 @@ public class Home extends MIDlet implements CommandListener {
                 // write post-action user code here
                 countingThread.stopCounting();
                 countingThread = null;
-                completeGuage = null;
             }//GEN-BEGIN:|7-commandAction|5|40-preAction
         } else if (displayable == Results) {
             if (command == backToStartCommand) {//GEN-END:|7-commandAction|5|40-preAction
                 // write pre-action user code here
                 countingThread.stopCounting();
                 switchDisplayable(null, getHome());//GEN-LINE:|7-commandAction|6|40-postAction
-                imageItem.setImage(null);
-                imageItem = null;
+                getImageItem().setImage(null);
                 countingThread = null;
             } else if (command == exitCommand) {//GEN-LINE:|7-commandAction|7|43-preAction
                 // write pre-action user code here
